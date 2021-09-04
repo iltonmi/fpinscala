@@ -42,7 +42,7 @@ object Tree {
     fold(t)(x => x)((x, y) => x max y)
   }
 
-  def map[A,B](t: Tree[A])(f: A => B): Tree[B] = {
+  def map_2[A,B](t: Tree[A])(f: A => B): Tree[B] = {
     fold(t)(x => Leaf(f(x)) : Tree[B])(Branch(_,_))
   }
 }

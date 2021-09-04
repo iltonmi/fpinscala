@@ -37,7 +37,7 @@ object Either {
     es.foldRight[Either[E, List[B]]](Right(Nil))((a,b) => f(a).map2(b)(_::_))
 
   // recursion
-  def traverse[E,A,B](es: List[A])(f: A => Either[E, B]): Either[E, List[B]] = es match {
+  def traverse_2[E,A,B](es: List[A])(f: A => Either[E, B]): Either[E, List[B]] = es match {
     case Nil => Right(Nil)
     case h::t => f(h).map2(traverse(t)(f))(_::_)
   }

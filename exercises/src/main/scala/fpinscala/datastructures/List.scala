@@ -52,7 +52,7 @@ object List { // `List` companion object. Contains functions for creating and wo
   // 3.2
   def tail[A](l: List[A]): List[A] = {
     l match {
-      case Nil => throw Exception
+      case Nil => sys.error("list error")
       case Cons(_, rest) => rest
     }
   }
@@ -66,7 +66,7 @@ object List { // `List` companion object. Contains functions for creating and wo
   def drop[A](l: List[A], n: Int): List[A] = {
     if(n > 0) {
       l match {
-        case Nil => sys.error("")
+        case Nil => sys.error("list error")
         case Cons(h, t) => drop(t, n - 1)
       }
     }
@@ -82,7 +82,7 @@ object List { // `List` companion object. Contains functions for creating and wo
 
   def init[A](l: List[A]): List[A] = {
     l match {
-      case Nil => throw Exception
+      case Nil => sys.error("list error")
       case Cons(_, Nil) => Nil
       case Cons(h, t) => Cons(h, init(t))
     }
