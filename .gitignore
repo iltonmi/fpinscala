@@ -13,3 +13,4 @@ project.vim
 .bsp
 .metals
 *.iml
+out
