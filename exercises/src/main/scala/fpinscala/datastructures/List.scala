@@ -64,13 +64,18 @@ object List { // `List` companion object. Contains functions for creating and wo
 
   // 3.4
   def drop[A](l: List[A], n: Int): List[A] = {
-    if(n > 0) drop(tail(l), n - 1)
+    if(n > 0) {
+      l match {
+        case Nil => sys.error("")
+        case Cons(h, t) => drop(t, n - 1)
+      }
+    }
     else l
   }
 
   def dropWhile[A](l: List[A], f: A => Boolean): List[A] = {
     l match {
-      case Cons(h, _) if f(h) => dropWhile(tail(l), f)
+      case Cons(h, t) if f(h) => dropWhile(t, f)
       case _ => l
     }
   }
@@ -106,13 +111,8 @@ object List { // `List` companion object. Contains functions for creating and wo
     foldLeft(l,1.0)(_*_)
 
   // 3.12
-  def rev[A](l : List[A]) : List[A] = {
-    l match {
-      case Nil => Nil
-      case Cons(h,t) => append(rev(t), Cons(h,Nil))
-    }
-  }
-
+  def rev[A](l : List[A]) : List[A] =
+    foldLeft(l, List[A]())((l, e) => Cons(e, l))
   // 3.14
   def append2[A](a1: List[A], a2: List[A]): List[A] =
     foldRight(a1, a2)(Cons(_,_))
