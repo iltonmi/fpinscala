@@ -14,18 +14,18 @@ sealed trait Option[+A] {
     case Some(x) => x
   }
 
+  // map first then get the option
   def flatMap[B](f: A => Option[B]): Option[B] = {
-    f(getOrElse(None))
+    map(f).getOrElse(None)
   }
 
+  // map to nested options, then getOrElse
   def orElse[B>:A](ob: => Option[B]): Option[B] = {
-    if(getOrElse(None) == None) ob
-    else this
+    this.map(Some(_)).getOrElse(ob)
   }
 
   def filter(f: A => Boolean): Option[A] = {
-    if(f(getOrElse(None))) this
-    else None
+    flatMap(a => if(f(a)) Some(a) else None)
   }
 }
 case class Some[+A](get: A) extends Option[A]
@@ -53,28 +53,43 @@ object Option {
     if (xs.isEmpty) None
     else Some(xs.sum / xs.length)
 
+  // map and flatmap can be used to extract value
+  // select between 2 map base on the result type for convenience
   def variance(xs: Seq[Double]): Option[Double] = {
-    mean(xs) match {
-      case None => None
-      case Some(m) => mean(xs.map(a => math.pow(a-m,2)))
-    }
+    mean(xs) flatMap (a => mean(xs.map(v => math.pow(v-a,2))))
   }
 
   def map2[A,B,C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] = {
-    if(a == None || b == None) None
-    else Some(f(a.getOrElse(), b.getOrElse()))
+    a flatMap (aa => b map (bb => f(aa,bb)))
   }
 
-  def sequence[A](a: List[Option[A]]): Option[List[A]] = {
-    val res = None
-    a.foreach {
-      case None => return None
-      case Some(x) => res.getOrElse(List()).appended(x)
+  // List maybe Nil.... okay, a Scala syntax problem...
+  def sequence[A](a: List[Option[A]]): Option[List[A]] = a match {
+    case Nil => Some(Nil)
+    case h::t => h flatMap(hh => sequence(t).map(hh::_))
+  }
+
+  // chain each element on the left to the list on the right
+  // using fold right
+  def sequence1[A](a: List[Option[A]]): Option[List[A]] = {
+    a.foldRight[Option[List[A]]](Some(Nil))((h,t) => map2(h,t)(_::_))
+  }
+
+  // 思路和sequence是一样的
+  // 都是用头元素和尾列表相连
+  // 具体方式：递归或foldRight
+  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] =
+    a match {
+      case Nil => Some(Nil)
+      case h::t => map2(f(h), traverse(t)(f))(_ :: _)
     }
-    res
-  }
 
-  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = {
+  def traverse_1[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] =
+    a.foldRight[Option[List[B]]](Some(Nil))((h,t) => map2(f(h),t)(_ :: _))
+
+  def sequenceViaTraverse[A](a: List[Option[A]]): Option[List[A]] =
+    traverse(a)(x => x)
+
+  def traverseViaSequence[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] =
     sequence(a map f)
-  }
 }
