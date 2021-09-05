@@ -30,18 +30,21 @@ object RNG {
       (f(a), rng2)
     }
 
+  // simplify using unit
   def map_1[A,B](s: Rand[A])(f: A => B): Rand[B] =
-    flatMap(s)(a => r => (f(a), r))
+    flatMap(s)(a => unit(f(a))
 
 
+  // simplify abs
   def nonNegativeInt(rng: RNG): (Int, RNG) = {
     val (i, r2) = rng.nextInt
-    (if(i > 0) i else if(i == Int.MinValue) 0 else -i, r2)
+    (if(i > 0) i else -i + 1, r2)
   }
 
+  // simplify division
   def double(rng: RNG): (Double, RNG) = {
     val (i, r2) = nonNegativeInt(rng)
-    (i.doubleValue() / Int.MaxValue.doubleValue() + 1, r2)
+    (i / Int.MaxValue.toDouble + 1, r2)
   }
 
   def double_1(r: RNG): (Double, RNG) = {
@@ -66,7 +69,10 @@ object RNG {
     ((d1,d2,d3), r3)
   }
 
+  // fix conner case
+  // by the way, this can be rewritten to tail recursion
   def ints(count: Int)(rng: RNG): (List[Int], RNG) = {
+    if(count == 0) (List(), rng)
     val (l, r) = ints(count - 1)(rng)
     val (i, r2) = r.nextInt
     (i::l, r2)
@@ -87,6 +93,11 @@ object RNG {
     val (i, r3) = h(r2)
     (i::l, r3)
   }
+
+  // rewrite using foldRight and map
+  // the official answer implement using foldRight and map2
+  def sequence_1[A](fs: List[Rand[A]]): Rand[List[A]] = r =>
+    fs.foldRight((List[A](),r))((ra,p) => map(ra)(_::p._1)(p._2))
 
   def flatMap[A,B](f: Rand[A])(g: A => Rand[B]): Rand[B] = r => {
     val (a, rn) = f(r)
