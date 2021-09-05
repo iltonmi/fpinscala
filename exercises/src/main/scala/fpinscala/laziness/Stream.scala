@@ -64,7 +64,7 @@ trait Stream[+A] {
   // use append to concat the single value stream and tail stream
   // rather than use head option to get the single value and
   // use the smart constructor to assemble single value and tail stream
-  def flapMap[B](f: A => Stream[B]) : Stream[B] =
+  def flatMap[B](f: A => Stream[B]) : Stream[B] =
     foldRight(empty[B])((a,b) => f(a) append b)
 
   def map_1[B](f: A => B): Stream[B] = unfold(this) {
