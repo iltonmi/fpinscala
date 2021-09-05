@@ -191,4 +191,16 @@ object List { // `List` companion object. Contains functions for creating and wo
       }
     }
   }
+
+  // 3.24
+  def startsWith[A](l : List[A], pre : List[A]): Boolean = (l, pre) match {
+    case (Cons(h1,t1), Cons(h2,t2)) if h1 == h2 => startsWith(t1,t2)
+    case (_, Nil) => true
+    case (Nil, _) => false
+  }
+
+  def hasSubsequence[A](sup: List[A], sub: List[A]): Boolean = sup match {
+    case Nil => sub == Nil
+    case Cons(_, t) => startsWith(sup, sub) || hasSubsequence(t, sub)
+  }
 }
