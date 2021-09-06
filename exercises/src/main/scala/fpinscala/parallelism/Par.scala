@@ -9,13 +9,38 @@ object Par {
   def run[A](s: ExecutorService)(a: Par[A]): Future[A] = a(s)
 
   def unit[A](a: A): Par[A] = (es: ExecutorService) => UnitFuture(a) // `unit` is represented as a function that returns a `UnitFuture`, which is a simple implementation of `Future` that just wraps a constant value. It doesn't use the `ExecutorService` at all. It's always done and can't be cancelled. Its `get` method simply returns the value that we gave it.
-  
+
+  def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
+
   private case class UnitFuture[A](get: A) extends Future[A] {
     def isDone = true 
     def get(timeout: Long, units: TimeUnit) = get 
     def isCancelled = false 
     def cancel(evenIfRunning: Boolean): Boolean = false 
   }
+
+  // 7.4
+  def asyncF[A,B](f: A => B): A => Par[B] = a => lazyUnit(f(a))
+
+  // 7.5
+  def sequence[A](ps: List[Par[A]]): Par[List[A]] = {
+    val size = ps.length
+    if(size == 0) lazyUnit(List())
+    else if (size == 1) lazyUnit(ps.head)
+    else {
+      val (l, r) = ps.splitAt(size / 2)
+      map2(sequence(l), sequence(r))((a, b) => a.appendedAll(b))
+    }
+  }
+
+  def parMap[A,B](ps: List[A])(f: A => B): Par[List[B]] = fork {
+    val fbs: List[Par[B]] = ps.map(asyncF(f))
+    sequence(fbs)
+  }
+
+  // 7.6
+  def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] =
+    sequence(as.map(asyncF(f)))
   
   def map2[A,B,C](a: Par[A], b: Par[B])(f: (A,B) => C): Par[C] = // `map2` doesn't evaluate the call to `f` in a separate logical thread, in accord with our design choice of having `fork` be the sole function in the API for controlling parallelism. We can always do `fork(map2(a,b)(f))` if we want the evaluation of `f` to occur in a separate thread.
     (es: ExecutorService) => {
