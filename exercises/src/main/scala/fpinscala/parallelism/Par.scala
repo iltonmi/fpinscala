@@ -29,7 +29,7 @@ object Par {
     else if (size == 1) lazyUnit(ps.head)
     else {
       val (l, r) = ps.splitAt(size / 2)
-      map2(sequence(l), sequence(r))((a, b) => a.appendedAll(b))
+      map2(sequence(l), sequence(r))(_++_)
     }
   }
 
@@ -50,7 +50,8 @@ object Par {
     }
   
   def fork[A](a: => Par[A]): Par[A] = // This is the simplest and most natural implementation of `fork`, but there are some problems with it--for one, the outer `Callable` will block waiting for the "inner" task to complete. Since this blocking occupies a thread in our thread pool, or whatever resource backs the `ExecutorService`, this implies that we're losing out on some potential parallelism. Essentially, we're using two threads when one should suffice. This is a symptom of a more serious problem with the implementation, and we will discuss this later in the chapter.
-    es => es.submit(new Callable[A] { 
+    es => es.submit(new Callable[A] {
+      // may cause dead lock when a task blocked by waiting for unconsumed tasks because of pooled threads exhausted
       def call = a(es).get
     })
 
