@@ -32,7 +32,7 @@ object RNG {
 
   // simplify using unit
   def map_1[A,B](s: Rand[A])(f: A => B): Rand[B] =
-    flatMap(s)(a => unit(f(a))
+    flatMap(s)(a => unit(f(a)))
 
 
   // simplify abs

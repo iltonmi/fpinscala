@@ -19,6 +19,14 @@ object Nonblocking {
       val latch = new CountDownLatch(1) // A latch which, when decremented, implies that `ref` has the result
       val refEx = new AtomicReference[Throwable]
 //      p(es).apply(a => {ref.set(a); latch.countDown()})
+      // recap: the role of executor service are run the task and its sub task
+      // As a result, we still need to explicitly trigger the main task using run(ExecutorService)(Par[A])
+      // In order to execute sub tasks in same pool, we pass the executor into the main task
+
+      // in order to fix the problem in 7.10
+      // 1. wrap the main task with try-catch
+      // 2. set the exception in catch block, in order to rethrow it after unblocked from the latch
+      // 3. count down to unblock the latch
       eval(es) {
         try {
           p(es) { a => ref.set(a); latch.countDown } // Asynchronously set the result, and decrement the latch
@@ -26,6 +34,15 @@ object Nonblocking {
           case ex => {refEx.set(ex); latch.countDown} // set exception and unblock
         }
       }
+      // why I do a recap ?
+      // because I was confused before the recap
+      // At first, I have some wrong comprehension:
+      // the p of type Par[A] is executed asynchronously in the Par itself, I got this idea because I saw
+      // the executor is passed into main task
+      // So, I think there wont be a way, at least not an elegant way to unblock the run thread and
+      // rethrow the exception( maybe some invasive way...
+      // After I got the recap, I got crystal clear idea that passing es into Par is only for sub task,
+      // the main task need to be called in explicit way(by main thread or executor consumer
       latch.await // Block until the `latch.countDown` is invoked asynchronously
       val ex = refEx.get
       // check exception
