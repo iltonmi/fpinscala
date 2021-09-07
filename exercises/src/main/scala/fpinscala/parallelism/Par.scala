@@ -71,6 +71,33 @@ object Par {
       if (run(es)(cond).get) t(es) // Notice we are blocking on the result of `cond`.
       else f(es)
 
+  def choice_1[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
+    choiceN(map(cond)(if(_) 0 else 1))(List(t,f))
+
+  def choice_2[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
+    chooser(cond)(if(_) t else f)
+
+  def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] = es =>
+    run(es)(choices(run(es)(n).get()))
+
+  def choiceN_1[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
+    chooser(n)(choices(_))
+
+  def chooser[A,B](pa: Par[A])(choices: A => Par[B]): Par[B] = es =>
+    run(es)(choices(run(es)(pa).get()))
+
+  def flatMap[A,B](pa: Par[A])(choices: A => Par[B]): Par[B] = es =>
+    run(es)(choices(run(es)(pa).get()))
+
+  def flatMapViaJoin[A,B](pa: Par[A])(choices: A => Par[B]): Par[B] =
+    join(map(pa)(choices))
+
+  def join[A](a: Par[Par[A]]): Par[A] = es =>
+    run(es)(run(es)(a).get)
+
+  def joinViaFlatMap[A](a: Par[Par[A]]): Par[A] =
+    flatMap(a)(a => a)
+
   /* Gives us infix syntax for `Par`. */
   implicit def toParOps[A](p: Par[A]): ParOps[A] = new ParOps(p)
 

@@ -6,8 +6,6 @@ import language.implicitConversions
 
 object Nonblocking {
 
-  type JFuture[T] = java.util.concurrent.Future[T]
-
   trait Future[+A] {
     private[parallelism] def apply(k: A => Unit): Unit
   }
