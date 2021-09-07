@@ -6,6 +6,8 @@ import language.implicitConversions
 
 object Nonblocking {
 
+  type JFuture[T] = java.util.concurrent.Future[T]
+
   trait Future[+A] {
     private[parallelism] def apply(k: A => Unit): Unit
   }
@@ -27,12 +29,12 @@ object Nonblocking {
       // 1. wrap the main task with try-catch
       // 2. set the exception in catch block, in order to rethrow it after unblocked from the latch
       // 3. count down to unblock the latch
-      eval(es) {
-        try {
-          p(es) { a => ref.set(a); latch.countDown } // Asynchronously set the result, and decrement the latch
-        } catch {
-          case ex => {refEx.set(ex); latch.countDown} // set exception and unblock
-        }
+
+      // Asynchronously set the result, and decrement the latch
+      try {
+        p(es) { a => ref.set(a); latch.countDown() }
+      } catch {
+        case ex: Throwable => refEx.set(ex); latch.countDown() // set exception and unblock
       }
       // why I do a recap ?
       // because I was confused before the recap
@@ -83,7 +85,7 @@ object Nonblocking {
      * Helper function, for evaluating an action
      * asynchronously, using the given `ExecutorService`.
      */
-    def eval(es: ExecutorService)(r: => Unit): Unit =
+    def eval(es: ExecutorService)(r: => Unit): JFuture[Unit] =
       es.submit(new Callable[Unit] { def call = r })
 
 
