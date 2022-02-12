@@ -25,7 +25,7 @@ object List { // `List` companion object. Contains functions for creating and wo
     if (as.isEmpty) Nil
     else Cons(as.head, apply(as.tail: _*))
 
-  val x = List(1,2,3,4,5) match {
+  val x: Int = List(1,2,3,4,5) match {
     case Cons(x, Cons(2, Cons(4, _))) => x
     case Nil => 42
     case Cons(x, Cons(y, Cons(3, Cons(4, _)))) => x + y
@@ -45,10 +45,10 @@ object List { // `List` companion object. Contains functions for creating and wo
       case Cons(x, xs) => f(x, foldRight(xs, z)(f))
     }
 
-  def sum2(ns: List[Int]) =
+  def sum2(ns: List[Int]): Int =
     foldRight(ns, 0)((x,y) => x + y)
 
-  def product2(ns: List[Double]) =
+  def product2(ns: List[Double]): Double =
     foldRight(ns, 1.0)(_ * _) // `_ * _` is more concise notation for `(x,y) => x * y`; see sidebar
 
   // 3.2
@@ -65,16 +65,18 @@ object List { // `List` companion object. Contains functions for creating and wo
   }
 
   // 3.4
+  @tailrec
   def drop[A](l: List[A], n: Int): List[A] = {
     if(n > 0) {
       l match {
         case Nil => sys.error("list error")
-        case Cons(h, t) => drop(t, n - 1)
+        case Cons(_, t) => drop(t, n - 1)
       }
     }
     else l
   }
 
+  @tailrec
   def dropWhile[A](l: List[A], f: A => Boolean): List[A] = {
     l match {
       case Cons(h, t) if f(h) => dropWhile(t, f)
@@ -94,8 +96,8 @@ object List { // `List` companion object. Contains functions for creating and wo
     foldRight(l,0)((_,t) => 1 + t)
   }
 
-  def length2[A](l : List[A]) =
-    foldLeft(l, 0)((x,y) => x + 1)
+  def length2[A](l : List[A]): Int =
+    foldLeft(l, 0)((x, _) => x + 1)
 
   @annotation.tailrec
   def foldLeft[A,B](l: List[A], z: B)(f: (B, A) => B): B = {
@@ -106,10 +108,10 @@ object List { // `List` companion object. Contains functions for creating and wo
   }
 
   // 3.11
-  def sum3(l : List[Int]) =
+  def sum3(l : List[Int]): Int =
     foldLeft(l, 0)(_+_)
 
-  def product3(l : List[Double]) =
+  def product3(l : List[Double]): Double =
     foldLeft(l,1.0)(_*_)
 
   // 3.12
