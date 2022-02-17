@@ -116,16 +116,31 @@ object RNG {
   def sequence[A](fs: List[Rand[A]]): Rand[List[A]] =
     fs.foldRight((r : RNG) => (List[A](), r))((r, b) => map2(r, b)(_::_))
 
-
-  def map2_1[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
-    flatMap(ra)(a => flatMap(rb)(b => r => (f(a,b), r)))
-
   def sequence[A](fs: List[Rand[A]]): Rand[List[A]] = r => {
     val h::t = fs
     val (l, r2) = sequence(t)(r)
     val (i, r3) = h(r2)
     (i::l, r3)
   }
+
+  // 6.8
+  def flatMap[A,B](f: Rand[A])(g: A => Rand[B]): Rand[B] = r => {
+    val (a, rn) = f(r)
+    g(a)(rn)
+  }
+
+  def nonNegativeLessThanViaFlatMap(n: Int): Rand[Int] =
+    flatMap(nonNegativeInt)(i => {
+      val mod = i % n
+      if (i + (n-1) - mod >= 0) unit(mod) else nonNegativeLessThanViaFlatMap(n)
+    })
+
+  // 6.9
+  def mapViaFlatMap[A,B](s: Rand[A])(f: A => B): Rand[B] =
+    flatMap(s)(a => unit(f(a)))
+
+  def map2ViaFlatMap[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+    flatMap(ra)(a => map(rb)(b => f(a, b)))
 
   // rewrite using foldRight and map
   // the official answer implement using foldRight and map2
@@ -144,9 +159,10 @@ object RNG {
   }
 }
 
-case class State[S,+A](run: S => (A, S)) {
-  def unit[A](a: A): State[S, A] = State(s => (a, s))
+import State._
 
+// 6.10
+case class State[S,+A](run: S => (A, S)) {
   def map[B](f: A => B): State[S, B] =
     flatMap(a => State(s => (f(a), s)))
 
@@ -157,6 +173,21 @@ case class State[S,+A](run: S => (A, S)) {
     val (a1,s1) = run(s)
     f(a1).run(s1)
   })
+}
+
+object State {
+  type Rand[A] = State[RNG, A]
+
+  def unit[S, A](a: A): State[S, A] = State(s => (a, s))
+
+  def sequence[S, A](sas: List[State[S, A]]): State[S, List[A]] = {
+    def go(s: S, actions: List[State[S,A]], acc: List[A]): (List[A],S) =
+      actions match {
+        case Nil => (acc.reverse,s)
+        case h :: t => h.run(s) match { case (a,s2) => go(s2, t, a :: acc) }
+      }
+    State((s: S) => go(s,sas,List()))
+  }
 
   def get[S]: State[S, S] = State(s => (s, s))
 
@@ -168,13 +199,28 @@ case class State[S,+A](run: S => (A, S)) {
   } yield ()
 }
 
+// 6.11
 sealed trait Input
 case object Coin extends Input
 case object Turn extends Input
 
 case class Machine(locked: Boolean, candies: Int, coins: Int)
 
-object State {
+object Candy {
   type Rand[A] = State[RNG, A]
-  def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = ???
+  def update = (i: Input) => (m: Machine) => {
+    (i, m) match {
+      case (Turn, Machine(true, _, _)) => m
+      case (Coin, Machine(false, _, _)) => m
+      case (_, Machine(_, 0, _)) => m
+      case (Coin, Machine(true, candy, coin)) => Machine(false, candy, coin + 1)
+      case (Turn, Machine(false, candy, coin)) => Machine(true, candy - 1, coin)
+    }
+  }
+
+  // given inputs as the event trigger state change, how will the machine state change
+  def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = for {
+    _ <- sequence(inputs map modify(update(_)))
+    s <- get
+  } yield (s.coins, s.candies)
 }
